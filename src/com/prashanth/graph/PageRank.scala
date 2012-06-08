@@ -2,6 +2,8 @@ package com.prashanth.graph
 import java.util.ArrayList
 import scala.collection.mutable.HashMap
 import scala.util.Random
+import scala.actors._
+import Actor._
 
 object PageRank extends App {
 
@@ -24,8 +26,8 @@ object PageRank extends App {
   }
 
   println("start--------- Creating Graph")
-  randomGraph()
-  // manualGraph()
+  // randomGraph()
+   manualGraph()
   println("end---------")
 
   /*
@@ -84,26 +86,39 @@ object PageRank extends App {
     val new_vertex = new HashMap[String, Double];
     val n_value = vertices.keySet.size
     val d_value = 0.85
-    for (vertex <- vertices.keySet) {
-      var right_value: Double = 0;
-      var vertex_new_rank: Double = 0;
-      if (in_edge.contains(vertex)) {
-        val it = in_edge(vertex).listIterator()
-        while (it.hasNext()) {
-          var incoming_edge = it.next()
-          var ratio = vertices(incoming_edge) / out_edge(incoming_edge).size()
-          right_value += ratio;
-          //     println(vertex + " - " + incoming_edge + " - " + out_edge(incoming_edge).size())
-        }
-        vertex_new_rank = ((1 - d_value) / n_value) + (d_value * right_value)
+    val caller = self
 
-      } else {
-        vertex_new_rank = Graph.default_vertex_rank
+    for (vertex <- vertices.keySet) {
+      actor {
+        var right_value: Double = 0;
+        var vertex_new_rank: Double = 0;
+        if (in_edge.contains(vertex)) {
+          val it = in_edge(vertex).listIterator()
+          while (it.hasNext()) {
+            var incoming_edge = it.next()
+            var ratio = vertices(incoming_edge) / out_edge(incoming_edge).size()
+            right_value += ratio;
+            //     println(vertex + " - " + incoming_edge + " - " + out_edge(incoming_edge).size())
+          }
+          vertex_new_rank = ((1 - d_value) / n_value) + (d_value * right_value)
+
+        } else {
+          vertex_new_rank = Graph.default_vertex_rank
+        }
+        //      println(vertex + " - " + vertex_new_rank)
+        //     println("-----")
+        new_vertex.put(vertex, vertex_new_rank)
+        caller ! vertex+" I'm done"
       }
-      //      println(vertex + " - " + vertex_new_rank)
-      //     println("-----")
-      new_vertex.put(vertex, vertex_new_rank)
+
     }
+
+    for (vertex <- vertices.keySet) {
+      receive{
+        case msg => println(msg)
+      }
+    }
+
     return new_vertex
   }
 
